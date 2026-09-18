@@ -3,13 +3,13 @@
 ## Recommended Google Forms Setup
 
 - Keep the form anonymous by default.
-- Do not enable Google Forms' automatic email collection. Use the optional email question below instead.
+- Contact info stays optional and manual (question 8) — do not enable Google Forms' automatic email collection.
 - Show a progress bar.
 - Do not shuffle the question order.
 - Use one section so the form feels quick.
-- Estimated completion time: 2 to 3 minutes.
-- Required questions: 3–9.
-- Optional questions: 1–2 and 10.
+- Estimated completion time: 1 to 2 minutes.
+- Required questions: 1–6.
+- Optional questions: 7–8.
 
 ## Form Title
 
@@ -19,84 +19,63 @@
 
 Thanks for being part of Complicated Tips this season.
 
-We'd love a quick bit of feedback on what worked and what we should focus on next year. It should take about 2 to 3 minutes, and you can keep your response anonymous.
+We'd love a quick bit of feedback on what worked and what we should focus on next year. It should take about a minute or two, and you can keep your response anonymous.
 
 ## Questions
 
-### 1. Name
+### 1. Keen to come back next season?
 
-Type: Short answer  
-Required: No  
-Description: `Optional — leave this blank if you'd prefer to stay anonymous.`
-
-### 2. Email
-
-Type: Short answer  
-Required: No  
-Description: `Optional — only include this if you're happy for us to follow up about your feedback.`  
-Response validation: Email address
-
-### 3. Keen to come back next season?
-
-Type: Multiple choice  
+Type: Multiple choice
 Required: Yes
 
 - Yes
 - No
 - Undecided
 
-### 4. Which parts of the comp did you enjoy the most?
+### 2. How easy was the site to use this year?
 
-Type: Checkboxes  
-Required: Yes  
-Description: `Choose up to 3.`  
-Response validation: Select at most 3
-
-- Leaderboard and ladder movement
-- Stats and season insights
-- Recaps and emails
-- Lockout reminders
-- Chat and banter
-- Private leaderboard groups
-- The scoring system
-- The simplicity of the site
-- Other
-
-### 5. How easy was the site to use this year?
-
-Type: Linear scale  
-Required: Yes  
-Scale: 1 to 5  
+Type: Linear scale
+Required: Yes
+Scale: 1 to 5
 Labels: `1 = Painful`, `5 = Easy as`
 
-### 6. Where should we put the most effort before next season?
+### 3. Where should we put the most effort before next season?
 
-Type: Multiple choice  
+Type: Multiple choice
 Required: Yes
 
-- Tipping flow and lockout experience
-- Leaderboard
-- Round results and stats
-- Chat and social features
-- Notifications, reminders and recaps
+- New look and feel (design refresh)
 - Mobile experience
+- Notifications and reminders
+- Private groups and mini-leagues
+- Stats and trends
 - Speed and reliability
-- Design and readability
 - Nothing major — keep polishing what is already there
 - Other
 
-### 7. What should happen when someone does not submit their tips before the first bounce of the round?
+### 4. What should happen when someone does not submit their tips before the first bounce of the round?
 
-Type: Multiple choice  
+Type: Multiple choice
 Required: Yes
 
 - Allow late entry for the remaining games. The round fully locks from the bounce of the second game of the round (usually the Friday night game).
 - Keep the current rule. Miss the first bounce of the round and you cannot tip that round at all.
 - Use a rolling lockout for every game. Each game's tip can be added or changed until that game starts.
 
-### 8. How much should entry be in 2027?
+### 5. How should a drawn match be scored?
 
-Type: Multiple choice  
+Type: Multiple choice
+Required: Yes
+
+- No one scores it — treat it as incorrect for everyone.
+- Everyone who tipped either team gets the points.
+- Half credit to anyone who tipped either team.
+- Doesn't count — drop that game from everyone's round.
+- Other
+
+### 6. How much should entry be in 2027?
+
+Type: Multiple choice
 Required: Yes
 
 - $20
@@ -104,18 +83,16 @@ Required: Yes
 - $40
 - $50
 
-### 9. Would you recommend the comp to a mate next season?
+### 7. Anything else you'd like to see in the comp next season?
 
-Type: Multiple choice  
-Required: Yes
-
-- Yes
-- No
-
-### 10. Are there any features or changes you'd like to see in the comp?
-
-Type: Paragraph  
+Type: Paragraph
 Required: No
+
+### 8. Name and/or email
+
+Type: Short answer
+Required: No
+Description: `Optional — only include this if you're happy for us to follow up about your feedback.`
 
 ## Confirmation Message
 

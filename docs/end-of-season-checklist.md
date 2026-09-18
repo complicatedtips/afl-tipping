@@ -1,6 +1,6 @@
 # End-of-Season Checklist
 
-Last updated: 2026-08-07
+Last updated: 2026-08-25
 
 This checklist turns the current season wrap-up and next-season prep into three buckets:
 
@@ -89,15 +89,15 @@ Relevant surfaces:
 
 ### Post-season backlog items
 
-- [ ] `BL-036`: production schema baseline and disaster recovery hardening.
-- [ ] `BL-011`: season archive selector and year-over-year comparison.
-- [ ] `BL-032`: public/archive Hall of Fame.
-- [ ] `UI-001`: remove hardcoded `2026` season assumptions.
+- [ ] `ARCH-001`: production schema baseline and disaster recovery hardening (part of the 2027 architecture review).
+- [ ] `ARCH-004`: Porkbun 9-year domain renewal.
+- [ ] `UXUI-007`: season archive selector and year-over-year comparison.
+- [ ] `UXUI-008`: public/archive Hall of Fame.
+- [ ] `ARCH-003`: remove hardcoded `2026` season assumptions (per-comp config layer).
 
-Relevant backlog references:
+Relevant backlog reference:
 
-- [BACKLOG_FEATURES.md](/Users/beauwilliams/Desktop/afl-tipping/BACKLOG_FEATURES.md)
-- [BACKLOG_UI_UX.md](/Users/beauwilliams/Desktop/afl-tipping/BACKLOG_UI_UX.md)
+- [Complicated Tips — Unified Backlog & Strategic Pillars](https://claude.ai/code/artifact/05e95e01-3b73-45cd-8c5a-b0c09927b2b4)
 
 ## Before 2027 Signup Opens
 
@@ -114,6 +114,17 @@ Relevant references:
 - [app/signup/page.tsx](/Users/beauwilliams/Desktop/afl-tipping/app/signup/page.tsx)
 - [app/login/page.tsx](/Users/beauwilliams/Desktop/afl-tipping/app/login/page.tsx)
 - [app/next-season/page.tsx](/Users/beauwilliams/Desktop/afl-tipping/app/next-season/page.tsx)
+
+### Domain continuity
+
+- [ ] Renew the primary domain in Porkbun for 9 years.
+- [ ] Confirm auto-renew, payment method, DNS records, domain lock, registrar account recovery, and contact email.
+- [ ] Add or confirm a calendar reminder for the next renewal horizon.
+
+Relevant references:
+
+- `ARCH-004` in [Complicated Tips — Unified Backlog & Strategic Pillars](https://claude.ai/code/artifact/05e95e01-3b73-45cd-8c5a-b0c09927b2b4)
+- Porkbun registrar account
 
 ### Hardcoded season cleanup
 
