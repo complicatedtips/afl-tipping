@@ -1,3 +1,6 @@
 {
-  "regions": ["syd1"]
+  "regions": ["syd1"],
+  "git": {
+    "deploymentEnabled": false
+  }
 }

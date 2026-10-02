@@ -1,0 +1,118 @@
+name: Deploy
+
+# Deploys the site to Vercel from GitHub Actions instead of Vercel's own Git
+# integration. This keeps us on Vercel's free Hobby plan while the repo lives
+# in the complicatedtips GitHub organization and has more than one contributor.
+#
+#   push to main            -> production deploy (after regression tests pass)
+#   pull request            -> preview deploy, link posted as a PR comment
+#   manual run (Actions tab) -> production if run on main, otherwise preview
+#
+# Needs one repository secret: VERCEL_TOKEN (created at vercel.com/account/tokens).
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Not secret: these just identify which Vercel project to deploy to.
+  VERCEL_ORG_ID: team_3qGth8IKU42D2BvFcTpy5rnX
+  VERCEL_PROJECT_ID: prj_PggTLe7ibkHiHnwdzNiRiAlWdWsJ
+
+jobs:
+  deploy:
+    # Pull requests from forks never get secrets, so skip them outright.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Work out target
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "prod_flag=--prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=preview" >> "$GITHUB_OUTPUT"
+            echo "prod_flag=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check Vercel token is set
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::Missing repository secret VERCEL_TOKEN"
+            exit 1
+          fi
+
+      - name: Run regression tests before production deploy
+        if: steps.target.outputs.environment == 'production'
+        run: |
+          npm ci
+          npm run test:regression
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel settings and environment variables
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=${{ steps.target.outputs.environment }} --token="$VERCEL_TOKEN"
+
+      - name: Build
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel build ${{ steps.target.outputs.prod_flag }} --token="$VERCEL_TOKEN"
+
+      # On the Hobby plan Vercel refuses deploys whose Git commit author isn't
+      # the account owner. The build is already done, so drop the Git metadata
+      # and the deploy is attributed to the token owner instead.
+      - name: Remove Git metadata
+        run: rm -rf .git
+
+      - name: Deploy
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          url="$(vercel deploy --prebuilt ${{ steps.target.outputs.prod_flag }} --token="$VERCEL_TOKEN")"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed to $url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post preview link on the pull request
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+        with:
+          script: |
+            const marker = "<!-- vercel-preview -->";
+            const body = `${marker}\n**Preview deploy ready:** ${process.env.PREVIEW_URL}\n\nCommit: ${context.payload.pull_request.head.sha.slice(0, 7)}`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number, per_page: 100 });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
