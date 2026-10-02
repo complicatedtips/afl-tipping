@@ -33,12 +33,16 @@ export default function CompPage() {
 
       setCompName(comp.name);
 
-      // Auto-join
-      const { error: e2 } = await supabaseBrowser.from("memberships").upsert({
-        competition_id: comp.id,
-        user_id: user.id,
-        role: "member",
-      });
+      // Auto-join as a plain member. If already a member, leave the existing
+      // row (role, payment status) untouched.
+      const { error: e2 } = await supabaseBrowser.from("memberships").upsert(
+        {
+          competition_id: comp.id,
+          user_id: user.id,
+          role: "member",
+        },
+        { onConflict: "competition_id,user_id", ignoreDuplicates: true }
+      );
 
       if (e2) {
         setMsg(`Joined, but membership save failed: ${e2.message}`);
