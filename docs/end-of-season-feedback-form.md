@@ -1,4 +1,23 @@
-# Complicated Tips End-of-Season Form
+# Complicated Tips End-of-Season Feedback Form
+
+Status: ready to build in Google Forms and email out.
+
+## Email Copy
+
+Subject: `Quick Complicated Tips season feedback`
+
+Hi everyone,
+
+Thanks again for being part of Complicated Tips this season.
+
+Now that the season is wrapped, we'd love a quick bit of feedback on what worked and what we should focus on before next year. The form should only take a minute or two, and you can keep your response anonymous.
+
+Feedback form: [PASTE GOOGLE FORM LINK HERE]
+
+Thanks again for playing this year. We'll read every response and use it to shape next season.
+
+Cheers,
+Beau
 
 ## Recommended Google Forms Setup
 

@@ -44,7 +44,7 @@ Relevant surfaces:
 
 Relevant docs and flows:
 
-- [docs/end-of-season-feedback-form-draft.md](/Users/beauwilliams/Desktop/afl-tipping/docs/end-of-season-feedback-form-draft.md)
+- [docs/end-of-season-feedback-form.md](/Users/beauwilliams/Desktop/afl-tipping/docs/end-of-season-feedback-form.md)
 - [docs/BL-033-simplified-next-season-invite-flow.md](/Users/beauwilliams/Desktop/afl-tipping/docs/BL-033-simplified-next-season-invite-flow.md)
 - [app/next-season/page.tsx](/Users/beauwilliams/Desktop/afl-tipping/app/next-season/page.tsx)
 - [app/admin/interested-members/page.tsx](/Users/beauwilliams/Desktop/afl-tipping/app/admin/interested-members/page.tsx)
