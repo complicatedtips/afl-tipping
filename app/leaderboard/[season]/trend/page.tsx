@@ -54,6 +54,10 @@ export default async function LeaderboardTrendPage(props: LeaderboardTrendPagePr
         competitionId,
         supabase,
         includeTrends: true,
+        // Use the saved ladder (cleared whenever results sync, rebuilt on admin
+        // recalcs and late tips) instead of rebuilding it from every tip on
+        // each visit. Home and Stats already read it this way.
+        preferCached: true,
       });
     }
   } catch (error) {
