@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
@@ -41,6 +42,16 @@ function markAnnouncementsSeenNow() {
   window.localStorage.setItem("announcements_last_seen_ms", String(Date.now()));
 }
 
+// Chat counts are cheap and drive the chat badge, so they keep the 30s cadence.
+// Notices and group invites change rarely and their API calls are heavier,
+// so they refresh at most every 5 minutes, plus on login, when you come back
+// to the tab, and when you open the chat or notices page. Any refresh within
+// 30s of the last one is skipped, so a page load or quick navigation no
+// longer fires every call several times.
+const CHAT_POLL_MS = 30_000;
+const MIN_REFRESH_GAP_MS = 30_000;
+const SLOW_POLL_MS = 5 * 60_000;
+
 function isMissingRelationError(message: string, relationName: string) {
   const m = String(message || "").toLowerCase();
   const rel = relationName.toLowerCase();
@@ -61,10 +72,13 @@ export function ChatActivityProvider({
   const [unreadMentions, setUnreadMentions] = useState(0);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [unreadLeaderboardInvites, setUnreadLeaderboardInvites] = useState(0);
-  const [sessionState, setSessionState] = useState<{
-    accessToken: string;
-    userId: string;
-  } | null>(null);
+  // Only the user id drives the effects below. The access token changes on
+  // every token refresh and used to restart the checks (three times on each
+  // page load), so it lives in a ref instead.
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
+  const accessTokenRef = useRef<string | null>(null);
+  const lastChatRefreshMsRef = useRef(0);
+  const lastSlowRefreshMsRef = useRef(0);
   const [isPageVisible, setIsPageVisible] = useState(() => {
     if (typeof document === "undefined") return true;
     return document.visibilityState === "visible";
@@ -73,33 +87,30 @@ export function ChatActivityProvider({
   useEffect(() => {
     let mounted = true;
 
+    function clearAll() {
+      accessTokenRef.current = null;
+      setSessionUserId(null);
+      setUnreadChat(0);
+      setUnreadMentions(0);
+      setUnreadAnnouncements(0);
+      setUnreadLeaderboardInvites(0);
+    }
+
     async function syncSession() {
       if (!initialAuthenticated) {
-        if (mounted) {
-          setSessionState(null);
-          setUnreadChat(0);
-          setUnreadMentions(0);
-          setUnreadAnnouncements(0);
-          setUnreadLeaderboardInvites(0);
-        }
+        if (mounted) clearAll();
         return;
       }
 
       const { data } = await supabaseBrowser.auth.getSession();
       if (!mounted) return;
       if (!data.session) {
-        setSessionState(null);
-        setUnreadChat(0);
-        setUnreadMentions(0);
-        setUnreadAnnouncements(0);
-        setUnreadLeaderboardInvites(0);
+        clearAll();
         return;
       }
 
-      setSessionState({
-        accessToken: data.session.access_token,
-        userId: data.session.user.id,
-      });
+      accessTokenRef.current = data.session.access_token;
+      setSessionUserId(data.session.user.id);
     }
 
     void syncSession();
@@ -107,17 +118,12 @@ export function ChatActivityProvider({
     const { data: sub } = supabaseBrowser.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
       if (!session) {
-        setSessionState(null);
-        setUnreadChat(0);
-        setUnreadMentions(0);
-        setUnreadAnnouncements(0);
-        setUnreadLeaderboardInvites(0);
+        clearAll();
         return;
       }
-      setSessionState({
-        accessToken: session.access_token,
-        userId: session.user.id,
-      });
+      accessTokenRef.current = session.access_token;
+      // Same user id → React skips the re-render, so no extra refresh.
+      setSessionUserId(session.user.id);
     });
 
     return () => {
@@ -139,48 +145,42 @@ export function ChatActivityProvider({
   }, []);
 
   useEffect(() => {
-    async function refreshChatActivity() {
-      if (!sessionState) {
-        setUnreadChat(0);
-        setUnreadMentions(0);
-        setUnreadAnnouncements(0);
-        setUnreadLeaderboardInvites(0);
-        return;
+    const userId = sessionUserId;
+
+    async function refreshChatCounts(uid: string) {
+      const sinceIso = new Date(getLastChatSeenMs()).toISOString();
+
+      const [chatResult, mentionResult] = await Promise.all([
+        supabaseBrowser
+          .from("chat_messages")
+          .select("id", { count: "exact", head: true })
+          .gt("created_at", sinceIso),
+        supabaseBrowser
+          .from("chat_message_mentions")
+          .select("id", { count: "exact", head: true })
+          .eq("mentioned_user_id", uid)
+          .gt("created_at", sinceIso),
+      ]);
+
+      if (!chatResult.error) {
+        setUnreadChat(chatResult.count ?? 0);
       }
 
-      const lastSeen = getLastChatSeenMs();
-      const sinceIso = new Date(lastSeen).toISOString();
-
-      const { count, error } = await supabaseBrowser
-        .from("chat_messages")
-        .select("id", { count: "exact", head: true })
-        .gt("created_at", sinceIso);
-
-      if (!error) {
-        setUnreadChat(count ?? 0);
-      }
-
-      const { count: mentionCount, error: mentionErr } = await supabaseBrowser
-        .from("chat_message_mentions")
-        .select("id", { count: "exact", head: true })
-        .eq("mentioned_user_id", sessionState.userId)
-        .gt("created_at", sinceIso);
-
-      if (mentionErr) {
-        if (isMissingRelationError(mentionErr.message, "chat_message_mentions")) {
+      if (mentionResult.error) {
+        if (isMissingRelationError(mentionResult.error.message, "chat_message_mentions")) {
           setUnreadMentions(0);
         }
       } else {
-        setUnreadMentions(mentionCount ?? 0);
+        setUnreadMentions(mentionResult.count ?? 0);
       }
+    }
 
+    async function refreshAnnouncements(token: string) {
       const lastAnnouncementsSeenMs = getLastAnnouncementsSeenMs();
       try {
         const announcementsRes = await fetch("/api/announcements", {
           cache: "no-store",
-          headers: {
-            Authorization: `Bearer ${sessionState.accessToken}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         const announcementsJson = (await announcementsRes
           .json()
@@ -202,13 +202,13 @@ export function ChatActivityProvider({
       } catch {
         setUnreadAnnouncements(0);
       }
+    }
 
+    async function refreshInvites(token: string) {
       try {
         const invitesRes = await fetch("/api/leaderboard-group-invites", {
           cache: "no-store",
-          headers: {
-            Authorization: `Bearer ${sessionState.accessToken}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         const invitesJson = (await invitesRes.json().catch(() => null)) as
           | { ok?: boolean; pending_count?: number }
@@ -221,6 +221,27 @@ export function ChatActivityProvider({
       } catch {
         setUnreadLeaderboardInvites(0);
       }
+    }
+
+    // Runs whatever is due. `force` skips the gap check (used when the
+    // chat or notices page is opened, so its badge clears straight away).
+    function refreshDue(force = false) {
+      if (!userId) return;
+      const token = accessTokenRef.current;
+      const now = Date.now();
+      const jobs: Promise<void>[] = [];
+
+      if (force || now - lastChatRefreshMsRef.current >= MIN_REFRESH_GAP_MS) {
+        lastChatRefreshMsRef.current = now;
+        jobs.push(refreshChatCounts(userId));
+      }
+
+      if (token && (force || now - lastSlowRefreshMsRef.current >= SLOW_POLL_MS)) {
+        lastSlowRefreshMsRef.current = now;
+        jobs.push(refreshAnnouncements(token), refreshInvites(token));
+      }
+
+      void Promise.all(jobs);
     }
 
     if (!pathname) return;
@@ -237,17 +258,22 @@ export function ChatActivityProvider({
       markAnnouncementsSeenNow();
     }
 
-    if (!sessionState) return;
+    if (!userId) {
+      // Counts are already zeroed where the session is cleared.
+      lastChatRefreshMsRef.current = 0;
+      lastSlowRefreshMsRef.current = 0;
+      return;
+    }
 
     if (!isPageVisible) return;
 
-    void refreshChatActivity();
+    refreshDue(viewingChat || viewingAnnouncements);
 
     const t = setInterval(() => {
-      void refreshChatActivity();
-    }, 30000);
+      refreshDue();
+    }, CHAT_POLL_MS);
     return () => clearInterval(t);
-  }, [isPageVisible, pathname, sessionState, viewingChat, viewingAnnouncements]);
+  }, [isPageVisible, pathname, sessionUserId, viewingChat, viewingAnnouncements]);
 
   const value = useMemo(
     () => ({
